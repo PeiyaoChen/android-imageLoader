@@ -10,10 +10,10 @@ FEATURES
 * The image will be identified by the url, if the image of the same url exists in the cache(memory or file system), it will be fetch from the cache instead the internet.
 * The image will be set to the percific view's backround or image property after downloaded.
 * Implements 4 kinds of thread queue:
-    Finite FIFO
-    InFinite FIFO
-    Finite LIFO
-    InFinite LIFO
+    1. Finite FIFO
+    2. Infinite FIFO
+    3. Finite LIFO
+    4. Infinite LIFO
 
 USAGE
 ===================
