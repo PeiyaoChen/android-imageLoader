@@ -7,15 +7,17 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
 /**
- * 该类封装了本地图片的存取接口
+ * This class provide methods to get image or store image in local file system
+ * @author cpy
+ *
  */
 public class LocalImageHelper {
 	
 	
 	/**
-	 * 以bitmap方式读出一张本地图片
-	 * @param imgName 要读出的图片文件名
-	 * @return 所要的bitmap
+	 * Get image from local
+	 * @param path image's path
+	 * @return
 	 */
 	public static Bitmap getLocalImage(String path) {
 		Bitmap bitmap = null;
@@ -26,9 +28,9 @@ public class LocalImageHelper {
 	}
 	
 	/**
-	 * 把一张图片以bitmap形式存入本地
-	 * @param imgName 图片文件名
-	 * @param img 图片的bitmap资源
+	 * Store image in local 
+	 * @param filePath file path
+	 * @param img image to be saved
 	 */
 	public static void storeImage(final String filePath, Bitmap img) {
 		File file = new File(filePath);
@@ -45,7 +47,7 @@ public class LocalImageHelper {
 	}
 	
 	/**
-	 * 若path不存在，则创建
+	 * create path's parent directories
 	 * @param path
 	 */
 	private static void createImgParentFile(String path) {

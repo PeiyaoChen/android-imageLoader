@@ -1,3 +1,8 @@
+/*
+ * Written by Peiyao Chen
+ * Peiyao Chen is a master student in Sen Yat-sen University
+ * Eamil: wincpy@gmail.com
+ */
 package com.cpy.imageloader.loader;
 
 import java.io.IOException;
@@ -32,55 +37,64 @@ import com.cpy.imageloader.loader.MyDiscardOldestPolicy.DiscardCallback;
 import com.cpy.imageloader.loader.deque.LIFOLinkedBlockingDeque;
 
 /**
- * 该类从网络或者本地cache或者本地文件系统中加载图片。</br>
- * 本地cache的默认大小为:20张图片。在使用前，可以调用initCacheSizeByByte(int
- * byteNum)或initCacheSizeByPictureCount(int count)进行修改。 线程池的参数默认为：核心线程数3,
- * 最大线程数8, 非核心线程闲置存活时间15秒，调度队列为：容量10的先进先出有限队列。在使用前，可调用initThreadPool进行修改。
- * 当有限调度队列满时添加新任务的话，队列会舍弃最旧的任务，然后加入新的任务。
- * 该类使用单例模式。调用方法:ImageLoader.getInstance().XXX(方法名）</br></br>
- * 需要注意的是：当使用该类动态加载ListView图片时，ListView的layout_height最好设置为fill_parent，否则会影响性能。
+ * This class is used for loading image from server, local file system or memory cache </br></br>
+ * Default site of memory cache is: 20 pictures. Before usage, developer can call {@link #initCacheSizeByPictureCount(int)} or 
+ * {@link #initCacheSizeByByte(int)}  to change the size. </br></br>
  * 
- * @author cpy
+ * Default thread pool setting is: core thread number: 3, max thread number: 8, non-core thread alive time: 15s.
+ * Before usage, developer can call {@link #initThreadPool(int, int, int, int, int)} to change the setting</br> </br>
  * 
+ * When the waiting queue is full and a new thread is enqueued, the oldest thread will be removed and the new one will 
+ * be dequeued. </br></br>
+ * 
+ * This class use singleton pattern. Usage: ImageLoader.getInstance().XXX(method name) </br></br>
+ * 
+ * Note: When using this class to load image in ListView's items, please set ListView's layout_height fill_parent,
+ * otherwise performance will be not good.
+ *  
+ * @author Peiyao Chen
+ *
  */
 public class ImageLoader {
 
 	/**
-	 * 先进先出有限队列
+	 * Finite FIFO queue
 	 */
 	public static final int QUEUE_TYPE_FIFO_FINITE = 0;
 	/**
-	 * 先进先出无限队列
+	 * infinite FIFO queue
 	 */
 	public static final int QUEUE_TYPE_FIFO_INFINITE = 1;
 	/**
-	 * 后进先出有限队列
+	 * LIFO finite queue
 	 */
 	public static final int QUEUE_TYPE_LIFO_FINITE = 2;
 	/**
-	 * 后进先出无限队列
+	 * LIFO infinite queue
 	 */
 	public static final int QUEUE_TYPE_LIFO_INFINITE = 3;
 
 	/**
-	 * 单例instance
+	 * singleton instance
 	 */
 	private static ImageLoader instance = null;
 	private Handler handler = new Handler(Looper.getMainLooper());
 	/**
-	 * 用于放图片的cache，当cache满时添加图片，会释放前面的图片资源
+	 * Memory cache for bitmaps
 	 */
 	private LruCache<String, Bitmap> cache = new LruCache<String, Bitmap>(20);
 	/**
-	 * imageAdded指的是正在进程池里面被加载或等待被加载的图片url,该变量为了避免重复加载
+	 * Used to record the url of bitmaps which are being loaded or waiting in the queue,
+	 * It is used to avoid duplicate requesting
 	 */
 	private HashSet<String> imageAdded = new HashSet<String>();
 	/**
-	 * 用来记录下某对应url图片加载完后需要更新的view
+	 * record views that are waiting for a specific image
 	 */
 	private HashMap<String, Set<View>> urlMapViews = new HashMap<String, Set<View>>();
 	/**
-	 * 当view的加载url更新时，避免旧的加载图片作为显示
+	 * map from view and its requesting image's url. It is used to avoid updating views with old 
+	 * requesting picture
 	 */
 	private Map<View, String> viewToUrls = Collections
 			.synchronizedMap(new WeakHashMap<View, String>());
@@ -109,7 +123,7 @@ public class ImageLoader {
 	private int loadFailedCount = 0;
 
 	/**
-	 * MyDiscardOldestPolicy类的一个回调函数对象，当某个线程被挤出线程队列时，在imageAdded中去除该线程的url。
+	 * Callback which will be invoked when the queue is full and a thread is added.
 	 */
 	private DiscardCallback dcb = new DiscardCallback() {
 		@Override
@@ -123,14 +137,14 @@ public class ImageLoader {
 		}
 	};
 	/**
-	 * 线程池
+	 * Thread pool
 	 */
 	public ThreadPoolExecutor threadPool = new ThreadPoolExecutor(3, 8, 15,
 			TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(10),
 			new MyDiscardOldestPolicy(dcb));
 
 	/**
-	 * 获取实例
+	 * get instance
 	 * 
 	 * @return
 	 */
@@ -147,7 +161,7 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 构造函数
+	 * Constructor
 	 * 
 	 * @param context
 	 */
@@ -156,10 +170,10 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 以Byte为单位设置Cache大小,此方法必须在使用ImageLoader前设置
+	 * Set the memory cache size based on byte. It should be invoked before usage.
 	 * 
 	 * @param byteNum
-	 * @return 设置成功返回true, 不成功返回false
+	 * @return If setting succeed, return true. Otherwise, return false
 	 */
 	public boolean initCacheSizeByByte(int byteNum) {
 		if (hasInitSize || (cache != null && cache.size() > 0))
@@ -176,10 +190,10 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 以图片张数为单位设置Cache大小,此方法必须在使用ImageLoader前设置
+	 * Set the memory cache size based on picture number. It should be invoked before usage.
 	 * 
 	 * @param count
-	 * @return 设置成功返回true, 不成功返回false
+	 * @return If setting succeed, return true. Otherwise, return false
 	 */
 	public boolean initCacheSizeByPictureCount(int count) {
 		if (hasInitSize || (cache != null && cache.size() > 0))
@@ -195,16 +209,16 @@ public class ImageLoader {
 	 * 设置加载图片的线程池，该方法要在加载第一张照片前使用，否则设置无效。
 	 * 
 	 * @param corePoolSize
-	 *            核心线程数
+	 *            number of core thread
 	 * @param maximumPoolSize
-	 *            最大线程数
+	 *            maximum number of thread
 	 * @param keepAliveTime
-	 *            非核心线程闲置存活时间
+	 *            alive time of non-core thread
 	 * @param QueueType
-	 *            线程队列类型
+	 *            queue type
 	 * @param queueCapacity
-	 *            线程队列容量，当线程类型为有限队列类型时才起作用
-	 * @return true为设置成功，false为设置不成功。
+	 *            queue size. (if queue type is a finite queue)
+	 * @return If setting succeed, return true. Otherwise, return false
 	 */
 	public boolean initThreadPool(int corePoolSize, int maximumPoolSize,
 			int keepAliveTime, int QueueType, int queueCapacity) {
@@ -231,26 +245,23 @@ public class ImageLoader {
 		}
 		return true;
 	}
-
+	
 	/**
-	 * 从网络（会启动一个线程）或本地文件或内存cache中加载图片。首先会从cache中寻找，若没有，会到文件系统中找，若还是没有，则会到网络中取。
-	 * 网络中取下来后，会存到本地cache和文件系统中。当cache满时，加入新图片，会释放最先加入的图片。
-	 * 
-	 * @param url
-	 *            需要加载图片的url
-	 * @param view
-	 *            加载下来的图片要被设置到的view。若是ImageView,则会设置为src;若是其它类型view,
-	 *            则会设置为background
+	 * load image from server (launch a thread to do that) or local file system or memory cache.</br>
+	 * After image is pulled from server, it will be saved in local file system and memory cache.
+	 * @param url url of image to be loaded
+	 * @param view After image is loaded, this view will be updated. If view is ImageView, it will set its image property.
+	 * 			Otherwise, it will set its background property
 	 */
 	public void loadImage(final String url, View view) {
 		doLoadImage(url, view);
 	}
 	
 	/**
-	 * 从网络（会启动一个线程）或本地文件或内存cache中加载图片。首先会从cache中寻找，若没有，会到文件系统中找，若还是没有，则会到网络中取。
-	 * 网络中取下来后，会存到本地cache和文件系统中。当cache满时，加入新图片，会释放最先加入的图片。
-	 * @param url 需要加载的图片url
-	 * @param observer 回调
+	 * load image from server (launch a thread to do that) or local file system or memory cache.</br>
+	 * After image is pulled from server, it will be saved in local file system and memory cache.
+	 * @param url url of image to be loaded
+	 * @param observer After image is loaded, this callback's function will invoked
 	 */
 	public void loadImage(final String url, GetBitmapObserver observer) {
 		doLoadImage(url, observer);
@@ -312,7 +323,7 @@ public class ImageLoader {
 		if (url == null || url.equals("") || url.equals("NULL")) {
 			return;
 		}
-		// 查找cache里面是否存在图片
+		// Whether the image exists in cache
 		if (cache.get(url) != null) {
 			Log.v("cpy", "get from cache");
 			if (observer != null)
@@ -340,11 +351,10 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 根据url从网络加载bitmap类型图片
+	 * load bitmap from server
 	 * 
-	 * @param url
-	 *            图片的url
-	 * @return bitmap类型图片
+	 * @param url image url
+	 * @return 
 	 */
 	public Bitmap loadBitmapFromUrl(String url) {
 		URL realurl = null;
@@ -380,7 +390,7 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 更新ui
+	 * update views
 	 * 
 	 * @author cpy
 	 * 
@@ -422,18 +432,14 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 网络取图片的线程
+	 * Runnable to load image from server
 	 * 
 	 * @author cpy
 	 * 
 	 */
 	class LoadRunnable implements Runnable {
-		public String url; // 需要加载图片的url
+		public String url;
 
-		/**
-		 * @param url
-		 *            该runnable需要加载图片的url
-		 */
 		public LoadRunnable(String url) {
 			this.url = url;
 		}
@@ -448,8 +454,6 @@ public class ImageLoader {
 				Bitmap bitmap = loadBitmapFromUrl(url);
 				// imageAdded.remove(url);
 				if (bitmap != null) {
-					// cache.put(url, bitmap);
-					// Bitmap bitmap = ((BitmapDrawable)drawable).getBitmap();
 					cache.put(url, bitmap);
 					LocalImageHelper.storeImage(
 							localPathMapper.getLocalPath(url), bitmap);
@@ -468,8 +472,8 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 判断某url是否不是某个view当前最新的要加载图片的url <br/>
-	 * 主要为Listview设计
+	 * Whether the url is old for the view <br/>
+	 * Mainly designed for listview
 	 * 
 	 * @param view
 	 * @param url
@@ -482,13 +486,12 @@ public class ImageLoader {
 		return false;
 	}
 
+	/**
+	 * default local path mapping
+	 * @param url
+	 * @return
+	 */
 	private String urlToLocalPath(String url) {
-		// int index = url.lastIndexOf("\\/");
-		// String fileName = url.substring(index+1);
-		// index = fileName.lastIndexOf(".");
-		// String postfix = "";
-		// if(index != -1)
-		// postfix = fileName.substring(index);
 		return mContext.getDir("", Context.MODE_PRIVATE).getParent()
 				+ "/ImageCache/" + url.replace("/", "");
 	}
