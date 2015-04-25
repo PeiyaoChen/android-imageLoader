@@ -161,16 +161,6 @@ public class ATestActivity extends Activity{
 			urls.add(url);
 			urls.add(url);
 		}
-//		for(int i = 0; i < 140; i++) {
-//			urls.add("http://yun0.gzayong.info/image/" + i + ".jpg");
-//		}
-//		if(ImageLoader.getInstance(this).initCacheSizeByByte(1024 * 1024 * 10)) {
-//		if(ImageLoader.getInstance(this).initCacheSizeByPictureCount(10)) {
-//			Log.v("init", "true");
-//		}
-//		else {
-//			Log.v("init", "false");
-//		}
 		
 		adapter = new MyAdapter(urls, this);
 		ListView lView = ((ListView)findViewById(R.id.listview));

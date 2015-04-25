@@ -3,7 +3,6 @@ package com.cpy.imageloader.loader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,37 +62,69 @@ public class ImageLoader {
 	 */
 	public static final int QUEUE_TYPE_LIFO_INFINITE = 3;
 
+	/**
+	 * 单例instance
+	 */
 	private static ImageLoader instance = null;
 	private Handler handler = new Handler(Looper.getMainLooper());
-
-	// 用于放图片的cache，当cache满时添加图片，会释放前面的图片资源
-	public LruCache<String, Bitmap> cache = new LruCache<String, Bitmap>(20);
-	// imageAdded指的是正在进程池里面被加载或等待被加载的图片url,该变量为了避免重复加载
-	public HashSet<String> imageAdded = new HashSet<String>();
-	// 用来记录下某对应url图片加载完后需要更新的view
-	public HashMap<String, Set<View>> urlMapViews = new HashMap<String, Set<View>>();
-	// 当view的加载url更新时，避免旧的加载图片作为显示
+	/**
+	 * 用于放图片的cache，当cache满时添加图片，会释放前面的图片资源
+	 */
+	private LruCache<String, Bitmap> cache = new LruCache<String, Bitmap>(20);
+	/**
+	 * imageAdded指的是正在进程池里面被加载或等待被加载的图片url,该变量为了避免重复加载
+	 */
+	private HashSet<String> imageAdded = new HashSet<String>();
+	/**
+	 * 用来记录下某对应url图片加载完后需要更新的view
+	 */
+	private HashMap<String, Set<View>> urlMapViews = new HashMap<String, Set<View>>();
+	/**
+	 * 当view的加载url更新时，避免旧的加载图片作为显示
+	 */
 	private Map<View, String> viewToUrls = Collections
 			.synchronizedMap(new WeakHashMap<View, String>());
+
+	/**
+	 * record observer set that waiting for a specific image loading finished
+	 */
+	private Map<String, Set<GetBitmapObserver>> urlMapObservers = new HashMap<String, Set<GetBitmapObserver>>();
+
+	private LocalFilePathMapper localPathMapper = new LocalFilePathMapper() {
+		@Override
+		public String getLocalPath(String url) {
+			return urlToLocalPath(url);
+		}
+	};
 
 	private String path;
 	private Context mContext;
 	private boolean hasInitSize = false;
 	private boolean hasUsed = false;
 
-	// MyDiscardOldestPolicy类的一个回调函数对象，当某个线程被挤出线程队列时，在imageAdded中去除该线程的url。
-	// /**
+	// just for test
+	private int loadCount = 0;
+	private int loadSuccessCount = 0;
+	private int loadThrowCount = 0;
+	private int loadFailedCount = 0;
+
+	/**
+	 * MyDiscardOldestPolicy类的一个回调函数对象，当某个线程被挤出线程队列时，在imageAdded中去除该线程的url。
+	 */
 	private DiscardCallback dcb = new DiscardCallback() {
 		@Override
 		public void processDiscard(Runnable head, Runnable r) {
 			// TODO Auto-generated method stub
-//			imageAdded.remove(((LoadFromFileOrInternet) head).url);
-			imageAdded.remove(((LoadRunnable)head).url);
-			Log.v("cpy", "threadfull");
+			// imageAdded.remove(((LoadFromFileOrInternet) head).url);
+			imageAdded.remove(((LoadRunnable) head).url);
+			loadThrowCount++;
+			Log.v("threadThrow", loadThrowCount + " "
+					+ ((LoadRunnable) head).url);
 		}
 	};
-	// **/
-	// 线程池
+	/**
+	 * 线程池
+	 */
 	public ThreadPoolExecutor threadPool = new ThreadPoolExecutor(3, 8, 15,
 			TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(10),
 			new MyDiscardOldestPolicy(dcb));
@@ -115,11 +146,13 @@ public class ImageLoader {
 		return instance;
 	}
 
+	/**
+	 * 构造函数
+	 * 
+	 * @param context
+	 */
 	private ImageLoader(Context context) {
 		mContext = context.getApplicationContext();
-		path = mContext.getDir("", Context.MODE_PRIVATE).getParent()
-				+ "/ImageCache";
-
 	}
 
 	/**
@@ -210,36 +243,29 @@ public class ImageLoader {
 	 *            则会设置为background
 	 */
 	public void loadImage(final String url, View view) {
-		doLoadImage(url, view, false);
+		doLoadImage(url, view);
 	}
 
 	/**
-	 * 从网络（会启动一个线程）或本地文件或内存cache中加载图片。首先会从cache中寻找，若没有，会到文件系统中找，若还是没有，则会到网络中取。
-	 * 网络中取下来后，会存到本地cache和文件系统中。当cache满时，加入新图片，会释放最先加入的图片。
+	 * load image to set background or image of the view <br/>
+	 * If view is ImageView, it will set the its image property, otherwise set
+	 * its background property
 	 * 
 	 * @param url
-	 *            需要加载图片的url
+	 *            image url
 	 * @param view
-	 *            加载下来的图片要被设置到的view。若是ImageView,则会设置为src;若是其它类型view,
-	 *            则会设置为background
-	 * @param flag
-	 *            是否是人人微博
+	 *            view to update
 	 */
-	public void loadImage(final String url, View view, boolean flag) {
-		doLoadImage(url, view, flag);
-	}
-
-	private void doLoadImage(final String url, View view, boolean flag) {
+	private void doLoadImage(final String url, View view) {
 		hasUsed = true;
 		Log.v("cpy", "load image");
-		// 查找cache里面是否存在图片
 		if (url == null || url.equals("") || url.equals("NULL")) {
 			return;
 		}
+		// 查找cache里面是否存在图片
 		viewToUrls.put(view, url);
 		if (cache.get(url) != null) {
 			Log.v("cpy", "get from cache");
-
 			if (view instanceof ImageView) {
 				((ImageView) view).setImageBitmap(cache.get(url));
 			} else {
@@ -258,46 +284,51 @@ public class ImageLoader {
 		if (!imageAdded.add(url)) {
 			return;
 		}
-//		threadPool.execute(new LoadFromFileOrInternet(url, flag));
-		new Thread(new LoadFromFileOrInternet(url, flag)).start();
+		new Thread(new LoadFromFileOrRemote(url)).start();
+	}
+
+	/**
+	 * load image and then invoke callback
+	 * 
+	 * @param url
+	 *            image url
+	 * @param observer
+	 *            callback interface whose callback method will be invoked after
+	 *            loading finished
+	 */
+	private void doLoadImage(final String url, GetBitmapObserver observer) {
+		hasUsed = true;
+		Log.v("cpy", "load image");
+		if (url == null || url.equals("") || url.equals("NULL")) {
+			return;
+		}
+		// 查找cache里面是否存在图片
+		if (cache.get(url) != null) {
+			Log.v("cpy", "get from cache");
+			if (observer != null)
+				observer.onGetBitmap(cache.get(url));
+			return;
+		}
+
+		if (urlMapObservers.get(url) != null) {
+			urlMapObservers.get(url).add(observer);
+		} else {
+			Set<GetBitmapObserver> newSet = Collections
+					.newSetFromMap(new WeakHashMap<GetBitmapObserver, Boolean>());
+			newSet.add(observer);
+			urlMapObservers.put(url, newSet);
+		}
+		if (!imageAdded.add(url)) {
+			return;
+		}
+		new Thread(new LoadFromFileOrRemote(url)).start();
+
 	}
 
 	private Drawable bitmapToDrawable(Bitmap bitmap) {
 		return new BitmapDrawable(mContext.getResources(), bitmap);
 	}
 
-	/**
-	 * 根据url从网络加载drawable类型图片
-	 * 
-	 * @param url
-	 *            图片的url
-	 * @return drawable类型图片
-	 */
-	public Drawable loadDrawableFromUrl(String url) {
-		// ContactslistActivity.AICount++;
-
-		URL m;
-		InputStream i = null;
-		try {
-			m = new URL(url);
-			i = (InputStream) m.getContent();
-		} catch (MalformedURLException e1) {
-			e1.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		if (i != null) {
-			Drawable d = Drawable.createFromStream(i, "src");
-			Log.v("download successful", "cpy");
-			return d;
-		} else {
-			Log.v("download fail", "cpy");
-			return null;
-		}
-
-	}
-
-	// load the bitmap from the url
 	/**
 	 * 根据url从网络加载bitmap类型图片
 	 * 
@@ -328,9 +359,8 @@ public class ImageLoader {
 			bitmap = BitmapFactory.decodeStream(is);
 
 			if (bitmap != null) {
-				Log.v("download successful", "cpy");
-			} else {
-				Log.v("download fail", "cpy");
+				loadSuccessCount++;
+				Log.v("threadSucess", "load success" + loadSuccessCount);
 			}
 			is.close();
 		} catch (IOException e) {
@@ -363,23 +393,6 @@ public class ImageLoader {
 			// TODO Auto-generated method stub
 			Log.v("cpy", "display " + url);
 			int c = 0;
-			// for(int i = 0; urlMapViews.get(url) != null && i <
-			// urlMapViews.get(url).size(); i++)
-			// {
-			// View view = urlMapViews.get(url).get(i);
-			// if(view != null && (!isUrlOld(view, url)))
-			// {
-			// if(view instanceof ImageView)
-			// {
-			// ((ImageView) view).setImageBitmap(bitmap);
-			// }
-			// else
-			// {
-			// view.setBackgroundDrawable(bitmapToDrawable(bitmap));
-			// }
-			// }
-			// c++;
-			// }
 			if (urlMapViews.get(url) != null) {
 				Iterator iterator = urlMapViews.get(url).iterator();
 				while (iterator.hasNext()) {
@@ -395,8 +408,6 @@ public class ImageLoader {
 			}
 			Log.v("cpy", "dis count " + c);
 			urlMapViews.remove(url);
-			imageAdded.remove(url);
-			cache.put(url, bitmap);
 		}
 	}
 
@@ -408,7 +419,6 @@ public class ImageLoader {
 	 */
 	class LoadRunnable implements Runnable {
 		public String url; // 需要加载图片的url
-		public boolean flag = false;
 
 		/**
 		 * @param url
@@ -418,42 +428,38 @@ public class ImageLoader {
 			this.url = url;
 		}
 
-		/**
-		 * 
-		 * @param url
-		 *            该runnable需要加载图片的url
-		 * @param flag
-		 *            是否是人人微博
-		 */
-		public LoadRunnable(String url, boolean flag) {
-			this.url = url;
-			this.flag = flag;
-		}
-
 		@Override
 		public void run() {
 			// TODO Auto-generated method stub
 			try {
-				Log.v("thread start:" + url, "thread");
+				loadCount++;
+				Log.v("threadStart", "thread " + loadCount + ":" + url);
 				// get the bitmap from the internet
 				Bitmap bitmap = loadBitmapFromUrl(url);
 				// imageAdded.remove(url);
 				if (bitmap != null) {
 					// cache.put(url, bitmap);
 					// Bitmap bitmap = ((BitmapDrawable)drawable).getBitmap();
-					if (!flag)
-						LocalImageHelper.storeImage(urlToFilename(url), bitmap,
-								path);
+					cache.put(url, bitmap);
+					LocalImageHelper.storeImage(
+							localPathMapper.getLocalPath(url), bitmap);
 					handler.post(new DisplayWaitingViews(url, bitmap));
+				} else {
+					loadFailedCount++;
+					Log.v("threadFailed", "load failed" + loadFailedCount + ":"
+							+ url);
 				}
 			} catch (Exception e) {
 				throw new RuntimeException(e);
+			} finally {
+				imageAdded.remove(url);
 			}
 		}
 	}
 
 	/**
-	 * 判断某url是否不是某个view当前最新的要加载图片的url
+	 * 判断某url是否不是某个view当前最新的要加载图片的url <br/>
+	 * 主要为Listview设计
 	 * 
 	 * @param view
 	 * @param url
@@ -466,34 +472,26 @@ public class ImageLoader {
 		return false;
 	}
 
-	/**
-	 * 将url映射到文件名
-	 * 
-	 * @param url
-	 * @return
-	 */
-	private String urlToFilename(String url) {
-		// int index;
-		// int dotindex;
-		// index = url.lastIndexOf('/');
-		// dotindex = url.lastIndexOf('.');
-		// if(dotindex <= index)
-		// {
-		// int formerIndex = url.substring(0, index).lastIndexOf("/");
-		// String aa = url.substring(formerIndex + 1, index) + "_" +
-		// url.substring(index + 1);
-		// return url.substring(formerIndex + 1, index) + "_" +
-		// url.substring(index + 1);
-		// }
-		// String aa = url.substring(index + 1, dotindex);
-		// return url.substring(index + 1, dotindex);
-		return url.replace("/", "");
+	private String urlToLocalPath(String url) {
+		// int index = url.lastIndexOf("\\/");
+		// String fileName = url.substring(index+1);
+		// index = fileName.lastIndexOf(".");
+		// String postfix = "";
+		// if(index != -1)
+		// postfix = fileName.substring(index);
+		return mContext.getDir("", Context.MODE_PRIVATE).getParent()
+				+ "/ImageCache/" + url.replace("/", "");
 	}
 
+	/**
+	 * update view Runnable
+	 * 
+	 * @author cpy
+	 *
+	 */
 	class UpdateSingleView implements Runnable {
-
-		Bitmap bitmap;
-		View view;
+		private Bitmap bitmap;
+		private View view;
 
 		public UpdateSingleView(Bitmap bitmap, View view) {
 			this.bitmap = bitmap;
@@ -507,45 +505,59 @@ public class ImageLoader {
 			} else {
 				view.setBackgroundDrawable(bitmapToDrawable(bitmap));
 			}
-
 		}
 
 	}
 
-	class LoadFromFileOrInternet implements Runnable {
-
+	/**
+	 * load image from local or remote
+	 * 
+	 * @author cpy
+	 *
+	 */
+	class LoadFromFileOrRemote implements Runnable {
 		private String url;
-		private boolean flag;
 
-		public LoadFromFileOrInternet(String url, boolean flag) {
+		public LoadFromFileOrRemote(String url) {
 			this.url = url;
-			this.flag = flag;
 		}
 
 		@Override
 		public void run() {
-			synchronized (LoadFromFileOrInternet.class) {
-
+			synchronized (LoadFromFileOrRemote.class) {
 				Bitmap bitmap = null;
-				if (!flag)
-					bitmap = LocalImageHelper.getLocalImage(urlToFilename(url),
-							path);
+				bitmap = LocalImageHelper.getLocalImage(localPathMapper
+						.getLocalPath(url));
 				if (bitmap != null) {
 					Log.v("cpy", "load from local");
-					// cache.put(url, bitmap);
+					cache.put(url, bitmap);
 					handler.post(new DisplayWaitingViews(url, bitmap));
+					notifyObservers(url, bitmap);
+					imageAdded.remove(url);
 					return;
 				}
-
-				Log.v("thread submit:" + url, "thread");
-
-				LoadRunnable loadRunnable = new LoadRunnable(url, flag);
-
-				 threadPool.execute(loadRunnable);
-				//loadRunnable.run();
-
+				Log.v("thread submit:", "thread " + url);
+				LoadRunnable loadRunnable = new LoadRunnable(url);
+				threadPool.execute(loadRunnable);
 			}
 		}
 
+	}
+
+	private void notifyObservers(String url, Bitmap bitmap) {
+		if (urlMapObservers.get(url) != null) {
+			for (GetBitmapObserver observer : urlMapObservers.get(url)) {
+				observer.onGetBitmap(bitmap);
+			}
+			urlMapObservers.remove(url);
+		}
+	}
+
+	public interface GetBitmapObserver {
+		public void onGetBitmap(Bitmap bitmap);
+	}
+
+	public interface LocalFilePathMapper {
+		public String getLocalPath(String url);
 	}
 }

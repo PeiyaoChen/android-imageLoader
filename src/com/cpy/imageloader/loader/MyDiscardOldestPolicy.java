@@ -26,7 +26,6 @@ class MyDiscardOldestPolicy implements RejectedExecutionHandler
 	            old = ((LIFOLinkedBlockingDeque<Runnable>)e.getQueue()).pollLast();
         	else 
         		old = e.getQueue().poll();
-            //e.getQueue().add(r);
             e.execute(r);
             discardCallback.processDiscard(old, r);
         }
