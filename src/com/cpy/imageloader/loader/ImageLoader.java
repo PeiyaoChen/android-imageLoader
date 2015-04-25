@@ -245,6 +245,16 @@ public class ImageLoader {
 	public void loadImage(final String url, View view) {
 		doLoadImage(url, view);
 	}
+	
+	/**
+	 * 从网络（会启动一个线程）或本地文件或内存cache中加载图片。首先会从cache中寻找，若没有，会到文件系统中找，若还是没有，则会到网络中取。
+	 * 网络中取下来后，会存到本地cache和文件系统中。当cache满时，加入新图片，会释放最先加入的图片。
+	 * @param url 需要加载的图片url
+	 * @param observer 回调
+	 */
+	public void loadImage(final String url, GetBitmapObserver observer) {
+		doLoadImage(url, observer);
+	}
 
 	/**
 	 * load image to set background or image of the view <br/>
