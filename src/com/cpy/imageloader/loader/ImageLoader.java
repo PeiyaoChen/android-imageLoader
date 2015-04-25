@@ -563,6 +563,11 @@ public class ImageLoader {
 		}
 	}
 
+	/**
+	 * Interface definition of callback which is invoked after loading image finished
+	 * @author cpy
+	 *
+	 */
 	public interface GetBitmapObserver {
 		public void onGetBitmap(Bitmap bitmap);
 	}
