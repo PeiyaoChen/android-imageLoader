@@ -5,6 +5,9 @@
  */
 package com.cpy.imageloader.loader;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -23,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
@@ -356,7 +358,7 @@ public class ImageLoader {
 	 * @param url image url
 	 * @return 
 	 */
-	public Bitmap loadBitmapFromUrl(String url) {
+	private Bitmap loadBitmapFromUrl(String url) {
 		URL realurl = null;
 		Bitmap bitmap = null;
 
@@ -376,17 +378,41 @@ public class ImageLoader {
 			connection.connect();
 
 			InputStream is = connection.getInputStream();
-			bitmap = BitmapFactory.decodeStream(is);
-
-			if (bitmap != null) {
+//			bitmap = BitmapFactory.decodeStream(is);
+//			if (bitmap != null) {
 				loadSuccessCount++;
 				Log.v("threadSucess", "load success" + loadSuccessCount);
-			}
+				String path = localPathMapper.getLocalPath(url);
+				storeImage(is, path);
+				bitmap = LocalImageHelper.getLocalImage(path);
+//			}
 			is.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return bitmap;
+	}
+	
+	private void storeImage(InputStream is, String path) {
+		File file = new File(path);
+		if(!file.getParentFile().exists()) {
+			file.getParentFile().mkdirs();
+		}
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(file);
+			byte[] buffer = new byte[1024];
+			int byteRead = 0;
+			while((byteRead = is.read(buffer)) != -1) {
+				fos.write(buffer, 0, byteRead);
+			}
+			fos.flush();
+			fos.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -455,8 +481,8 @@ public class ImageLoader {
 				// imageAdded.remove(url);
 				if (bitmap != null) {
 					cache.put(url, bitmap);
-					LocalImageHelper.storeImage(
-							localPathMapper.getLocalPath(url), bitmap);
+//					LocalImageHelper.storeImage(
+//							localPathMapper.getLocalPath(url), bitmap);
 					handler.post(new DisplayWaitingViews(url, bitmap));
 				} else {
 					loadFailedCount++;

@@ -3,8 +3,10 @@ package com.cpy.imageloader.loader;
 import java.io.File;
 import java.io.FileOutputStream;
 
+import android.R.integer;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Bitmap.CompressFormat;
 
 /**
  * This class provide methods to get image or store image in local file system
@@ -28,7 +30,7 @@ public class LocalImageHelper {
 	}
 	
 	/**
-	 * Store image in local 
+	 * Store image in local (Save as JPEG) (Not used in current version) 
 	 * @param filePath file path
 	 * @param img image to be saved
 	 */
