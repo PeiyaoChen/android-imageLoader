@@ -263,7 +263,11 @@ public class ImageLoader {
 	 * 			Otherwise, it will set its background property
 	 */
 	public void loadImage(final String url, View view) {
-		doLoadImage(url, view);
+		doLoadImage(url, view, null, null);
+	}
+	
+	public void loadImage(final String url, View view, Integer width, Integer height) {
+		doLoadImage(url, view, width, height);
 	}
 	
 	/**
@@ -273,7 +277,11 @@ public class ImageLoader {
 	 * @param observer After image is loaded, this callback's function will invoked
 	 */
 	public void loadImage(final String url, GetBitmapObserver observer) {
-		doLoadImage(url, observer);
+		doLoadImage(url, observer, null, null);
+	}
+	
+	public void loadImage(final String url, GetBitmapObserver observer, Integer width, Integer height) {
+		doLoadImage(url, observer, width, height);
 	}
 
 	/**
@@ -286,13 +294,13 @@ public class ImageLoader {
 	 * @param view
 	 *            view to update
 	 */
-	private void doLoadImage(final String url, View view) {
+	private void doLoadImage(final String url, View view, Integer width, Integer height) {
 		hasUsed = true;
 		Log.v("cpy", "load image");
 		if (url == null || url.equals("") || url.equals("NULL")) {
 			return;
 		}
-		// 查找cache里面是否存在图片
+
 		viewToUrls.put(view, url);
 		if (cache.get(url) != null) {
 			Log.v("cpy", "get from cache");
@@ -314,7 +322,7 @@ public class ImageLoader {
 		if (!imageAdded.add(url)) {
 			return;
 		}
-		new Thread(new LoadFromFileOrRemote(url)).start();
+		new Thread(new LoadFromFileOrRemote(url, width, height)).start();
 	}
 
 	/**
@@ -326,7 +334,7 @@ public class ImageLoader {
 	 *            callback interface whose callback method will be invoked after
 	 *            loading finished
 	 */
-	private void doLoadImage(final String url, GetBitmapObserver observer) {
+	private void doLoadImage(final String url, GetBitmapObserver observer, Integer width, Integer height) {
 		hasUsed = true;
 		Log.v("cpy", "load image");
 		if (url == null || url.equals("") || url.equals("NULL")) {
@@ -351,7 +359,7 @@ public class ImageLoader {
 		if (!imageAdded.add(url)) {
 			return;
 		}
-		new Thread(new LoadFromFileOrRemote(url)).start();
+		new Thread(new LoadFromFileOrRemote(url, width, height)).start();
 
 	}
 
@@ -365,7 +373,7 @@ public class ImageLoader {
 	 * @param url image url
 	 * @return 
 	 */
-	private Bitmap loadBitmapFromUrl(String url) {
+	private Bitmap loadBitmapFromUrl(String url, Integer width, Integer height) {
 		URL realurl = null;
 		Bitmap bitmap = null;
 
@@ -394,7 +402,7 @@ public class ImageLoader {
 			if(is != null) {
 				String path = localPathMapper.getLocalPath(url);
 				storeImage(is, path);
-				bitmap = LocalImageHelper.getLocalImage(path);
+				bitmap = LocalImageHelper.getLocalImage(path, width, height);
 				if(bitmap != null) {
 					loadSuccessCount++;
 					Log.v("threadSucess", "load success" + loadSuccessCount);
@@ -480,9 +488,13 @@ public class ImageLoader {
 	 */
 	class LoadRunnable implements Runnable {
 		public String url;
+		public Integer width;
+		public Integer height;
 
-		public LoadRunnable(String url) {
+		public LoadRunnable(String url, Integer width, Integer height) {
 			this.url = url;
+			this.width = width;
+			this.height = height;
 		}
 
 		@Override
@@ -492,7 +504,7 @@ public class ImageLoader {
 				loadCount++;
 				Log.v("threadStart", "thread " + loadCount + ":" + url);
 				// get the bitmap from the internet
-				Bitmap bitmap = loadBitmapFromUrl(url);
+				Bitmap bitmap = loadBitmapFromUrl(url, width, height);
 				// imageAdded.remove(url);
 				if (bitmap != null) {
 					cache.put(url, bitmap);
@@ -571,9 +583,13 @@ public class ImageLoader {
 	 */
 	class LoadFromFileOrRemote implements Runnable {
 		private String url;
+		private Integer height;
+		private Integer width;
 
-		public LoadFromFileOrRemote(String url) {
+		public LoadFromFileOrRemote(String url, Integer height, Integer width) {
 			this.url = url;
+			this.height = height;
+			this.width = width;
 		}
 
 		@Override
@@ -581,7 +597,7 @@ public class ImageLoader {
 			synchronized (LoadFromFileOrRemote.class) {
 				Bitmap bitmap = null;
 				bitmap = LocalImageHelper.getLocalImage(localPathMapper
-						.getLocalPath(url));
+						.getLocalPath(url), width, height);
 				if (bitmap != null) {
 					Log.v("cpy", "load from local");
 					cache.put(url, bitmap);
@@ -591,7 +607,7 @@ public class ImageLoader {
 					return;
 				}
 				Log.v("thread submit:", "thread " + url);
-				LoadRunnable loadRunnable = new LoadRunnable(url);
+				LoadRunnable loadRunnable = new LoadRunnable(url, height, width);
 				threadPool.execute(loadRunnable);
 			}
 		}
@@ -663,10 +679,18 @@ public class ImageLoader {
 			setLocalHttpsTrustKeyStore(is, password);
 	}
 	
+	/**
+	 * disable host name verification on TLS handshake</br>
+	 * Default setting is enable
+	 */
 	public static void disableHostnameVerification() {
 		HttpHelper.disableHostNameVerification();
 	}
 	
+	/**
+	 * enable host name verification on TLS handshake</br>
+	 * Default setting is enable
+	 */
 	public static void enbleHostnameVerification() {
 		HttpHelper.enableHostNameVerification();
 	}

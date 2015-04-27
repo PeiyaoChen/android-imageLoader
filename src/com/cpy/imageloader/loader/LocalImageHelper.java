@@ -20,13 +20,29 @@ public class LocalImageHelper {
 	 * @param path image's path
 	 * @return
 	 */
-	public static Bitmap getLocalImage(String path) {
+	public static Bitmap getLocalImage(String path, Integer width, Integer height) {
 		Bitmap bitmap = null;
 		File file = new File(path);
-		if(file.exists())
+		if(file.exists()) {
 			bitmap = BitmapFactory.decodeFile(path);
+			if(width != null && height != null && width > 0 && height > 0)  {
+				float wScale = (float)width / (float)bitmap.getWidth();
+				if((int) (wScale * bitmap.getHeight()) <= height) {
+					if((int)wScale * bitmap.getHeight() <= 0 || width <= 0) {
+						int a = 0; 
+						a++;
+					}
+					bitmap = Bitmap.createScaledBitmap(bitmap, width, (int)(wScale * bitmap.getHeight()), false);
+				}
+				else {
+					float hScale = (float)height / (float)bitmap.getHeight();
+					bitmap = Bitmap.createScaledBitmap(bitmap, (int)(hScale * bitmap.getWidth()), height, false);
+				}
+			}
+		}
 		return bitmap;
 	}
+	
 	
 	/**
 	 * Store image in local (Save as JPEG) (Not used in current version) 
