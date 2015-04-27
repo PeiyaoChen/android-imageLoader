@@ -9,6 +9,8 @@ FEATURES
 * Images are downloaded and saved to cache via a pool of background threads.
 * The image will be identified by the url, if the image of the same url exists in the cache(memory or file system), it will be fetch from the cache instead the internet.
 * The image will be set to the percific view's backround or image property after downloaded.
+* Support http and https with default or custom keystore(for self-signed certificates).
+* Flexible usage: Asynchronizedly update views or invoke callbacks after image loading finished.
 * Implements 4 kinds of thread queue:
     1. Finite FIFO
     2. Infinite FIFO
