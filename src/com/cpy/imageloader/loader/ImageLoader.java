@@ -215,7 +215,7 @@ public class ImageLoader {
 	}
 
 	/**
-	 * 设置加载图片的线程池，该方法要在加载第一张照片前使用，否则设置无效。
+	 * Set the thread pool configuration, It should be invoked before usage.
 	 * 
 	 * @param corePoolSize
 	 *            number of core thread
@@ -618,6 +618,14 @@ public class ImageLoader {
 
 	public interface LocalFilePathMapper {
 		public String getLocalPath(String url);
+	}
+	
+	/**
+	 * set local file mapper
+	 * @param mapper
+	 */
+	public void setLocalFilePathMapper(LocalFilePathMapper mapper) {
+		this.localPathMapper = mapper;
 	}
 	
 	/**
