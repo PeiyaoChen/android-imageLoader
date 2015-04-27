@@ -1,14 +1,7 @@
 package com.cpy.imageloader.activity;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 
-import android.R.integer;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -18,8 +11,6 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 
 import com.cpy.imageloader.R;
-import com.cpy.imageloader.http.HttpHelper;
-import com.cpy.imageloader.loader.ImageLoader;
 
 public class ATestActivity extends Activity{
 

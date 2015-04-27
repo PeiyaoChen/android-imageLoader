@@ -655,11 +655,11 @@ public class ImageLoader {
 			setLocalHttpsTrustKeyStore(is, password);
 	}
 	
-	public void distableHostnameVerification() {
+	public static void disableHostnameVerification() {
 		HttpHelper.disableHostNameVerification();
 	}
 	
-	public static void enalbeHostnameVerification() {
+	public static void enbleHostnameVerification() {
 		HttpHelper.enableHostNameVerification();
 	}
 	
