@@ -626,7 +626,7 @@ public class ImageLoader {
 	 * @param password password of the keystore
 	 * @throws CertificateException 
 	 */
-	public void setLocalHttpsTrustKeyStore(InputStream keystore, String password) throws CertificateException {
+	public static void setLocalHttpsTrustKeyStore(InputStream keystore, String password) throws CertificateException {
 		KeyStore trusted;
 		try {
 			trusted = KeyStore.getInstance("BKS");
@@ -649,11 +649,18 @@ public class ImageLoader {
 	 * @throws FileNotFoundException
 	 * @throws CertificateException 
 	 */
-	public void setLocalHttpsTrustKeyStore(String keystorePath, String password) throws FileNotFoundException, CertificateException {
+	public static void setLocalHttpsTrustKeyStore(String keystorePath, String password) throws FileNotFoundException, CertificateException {
 			File file = new File(keystorePath);
 			FileInputStream is = new FileInputStream(file);
 			setLocalHttpsTrustKeyStore(is, password);
 	}
 	
+	public void distableHostnameVerification() {
+		HttpHelper.disableHostNameVerification();
+	}
+	
+	public static void enalbeHostnameVerification() {
+		HttpHelper.enableHostNameVerification();
+	}
 	
 }
