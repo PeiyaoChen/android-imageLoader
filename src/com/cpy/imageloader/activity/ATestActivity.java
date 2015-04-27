@@ -1,18 +1,24 @@
 package com.cpy.imageloader.activity;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 
-import com.cpy.imageloader.R;
-import com.cpy.imageloader.loader.ImageLoader;
-
+import android.R.integer;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ListView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ListView;
+
+import com.cpy.imageloader.R;
+import com.cpy.imageloader.http.HttpHelper;
 
 public class ATestActivity extends Activity{
 
@@ -22,7 +28,25 @@ public class ATestActivity extends Activity{
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.testactivity);
+		KeyStore trusted;
+		try {
+			trusted = KeyStore.getInstance("BKS");
+			InputStream in = getAssets().open("myKeystore.bks");
+	        trusted.load(in, "mysecret".toCharArray());
+	        HttpHelper.init(trusted);
+	        in.close();
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		} catch (CertificateException e) {
+			e.printStackTrace();
+		}
+        
 		String[] urlArray = new String[]{
+				"https://143.89.37.199:10095/tmp/hkust_0.png",
 				"http://img03.taobaocdn.com/tps/i3/T1lh1IXClcXXajoXZd-205-130.jpg",
 		          "http://img02.taobaocdn.com/tps/i2/T1oN5LXvBdXXajoXZd-205-130.jpg",
 		          "http://img03.taobaocdn.com/tps/i3/T1FbyMXrJcXXbByyEK-755-260.jpg",

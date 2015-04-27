@@ -15,7 +15,6 @@ import android.graphics.Bitmap.CompressFormat;
  */
 public class LocalImageHelper {
 	
-	
 	/**
 	 * Get image from local
 	 * @param path image's path

@@ -6,12 +6,17 @@
 package com.cpy.imageloader.loader;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,6 +40,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.cpy.imageloader.R;
+import com.cpy.imageloader.http.HttpHelper;
 import com.cpy.imageloader.loader.MyDiscardOldestPolicy.DiscardCallback;
 import com.cpy.imageloader.loader.deque.LIFOLinkedBlockingDeque;
 
@@ -117,7 +124,7 @@ public class ImageLoader {
 	private Context mContext;
 	private boolean hasInitSize = false;
 	private boolean hasUsed = false;
-
+	
 	// just for test
 	private int loadCount = 0;
 	private int loadSuccessCount = 0;
@@ -369,24 +376,32 @@ public class ImageLoader {
 		}
 
 		try {
-			HttpURLConnection connection = (HttpURLConnection) realurl
-					.openConnection();
-			connection.setDoInput(true);
-			connection.setConnectTimeout(30000);
-			connection.setReadTimeout(30000);
-			connection.setInstanceFollowRedirects(true);
-			connection.connect();
-
-			InputStream is = connection.getInputStream();
-//			bitmap = BitmapFactory.decodeStream(is);
-//			if (bitmap != null) {
-				loadSuccessCount++;
-				Log.v("threadSucess", "load success" + loadSuccessCount);
+//			HttpURLConnection connection = (HttpURLConnection) realurl
+//					.openConnection();
+//			connection.setDoInput(true);
+//			connection.setConnectTimeout(30000);
+//			connection.setReadTimeout(30000);
+//			connection.setInstanceFollowRedirects(true);
+//			connection.connect();
+//
+//			InputStream is = connection.getInputStream();
+			InputStream is = null;
+			try {
+				is = HttpHelper.getInstance().getInputStream(url);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			if(is != null) {
 				String path = localPathMapper.getLocalPath(url);
 				storeImage(is, path);
 				bitmap = LocalImageHelper.getLocalImage(path);
-//			}
-			is.close();
+				if(bitmap != null) {
+					loadSuccessCount++;
+					Log.v("threadSucess", "load success" + loadSuccessCount);
+				}
+			}
+			if(is != null)
+				is.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -604,4 +619,41 @@ public class ImageLoader {
 	public interface LocalFilePathMapper {
 		public String getLocalPath(String url);
 	}
+	
+	/**
+	 * set keystore of self signed certificates
+	 * @param keystore keystore file of self signed certificates inputstream
+	 * @param password password of the keystore
+	 * @throws CertificateException 
+	 */
+	public void setLocalHttpsTrustKeyStore(InputStream keystore, String password) throws CertificateException {
+		KeyStore trusted;
+		try {
+			trusted = KeyStore.getInstance("BKS");
+	        trusted.load(keystore, password.toCharArray());
+	        HttpHelper.init(trusted);
+	        keystore.close();
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * set keystore of self signed certificates
+	 * @param keystorePath path of the keystore file
+	 * @param password password password of the keystore
+	 * @throws FileNotFoundException
+	 * @throws CertificateException 
+	 */
+	public void setLocalHttpsTrustKeyStore(String keystorePath, String password) throws FileNotFoundException, CertificateException {
+			File file = new File(keystorePath);
+			FileInputStream is = new FileInputStream(file);
+			setLocalHttpsTrustKeyStore(is, password);
+	}
+	
+	
 }
