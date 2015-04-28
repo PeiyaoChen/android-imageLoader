@@ -302,12 +302,12 @@ public class ImageLoader {
 		}
 
 		viewToUrls.put(view, url);
-		if (cache.get(url) != null) {
+		if (cache.get(getCacheKey(url, width, height)) != null) {
 			Log.v("cpy", "get from cache");
 			if (view instanceof ImageView) {
-				((ImageView) view).setImageBitmap(cache.get(url));
+				((ImageView) view).setImageBitmap(cache.get(getCacheKey(url, width, height)));
 			} else {
-				view.setBackgroundDrawable(bitmapToDrawable(cache.get(url)));
+				view.setBackgroundDrawable(bitmapToDrawable(cache.get(getCacheKey(url, width, height))));
 			}
 			return;
 		}
@@ -324,7 +324,7 @@ public class ImageLoader {
 		}
 		new Thread(new LoadFromFileOrRemote(url, width, height)).start();
 	}
-
+	
 	/**
 	 * load image and then invoke callback
 	 * 
@@ -341,10 +341,10 @@ public class ImageLoader {
 			return;
 		}
 		// Whether the image exists in cache
-		if (cache.get(url) != null) {
+		if (cache.get(getCacheKey(url, width, height)) != null) {
 			Log.v("cpy", "get from cache");
 			if (observer != null)
-				observer.onGetBitmap(cache.get(url));
+				observer.onGetBitmap(cache.get(getCacheKey(url, width, height)));
 			return;
 		}
 
@@ -361,6 +361,14 @@ public class ImageLoader {
 		}
 		new Thread(new LoadFromFileOrRemote(url, width, height)).start();
 
+	}
+	
+	private String getCacheKey(String url, Integer width, Integer height) {
+		if(width != null && height != null && width > 0 && height > 0) {
+			Log.v("getCacheKey", "key with heihgt and width");
+			return url + width + "_" + height;
+		}
+		return url;
 	}
 
 	private Drawable bitmapToDrawable(Bitmap bitmap) {
@@ -507,7 +515,7 @@ public class ImageLoader {
 				Bitmap bitmap = loadBitmapFromUrl(url, width, height);
 				// imageAdded.remove(url);
 				if (bitmap != null) {
-					cache.put(url, bitmap);
+					cache.put(getCacheKey(url, width, height), bitmap);
 //					LocalImageHelper.storeImage(
 //							localPathMapper.getLocalPath(url), bitmap);
 					handler.post(new DisplayWaitingViews(url, bitmap));
@@ -600,7 +608,7 @@ public class ImageLoader {
 						.getLocalPath(url), width, height);
 				if (bitmap != null) {
 					Log.v("cpy", "load from local");
-					cache.put(url, bitmap);
+					cache.put(getCacheKey(url, width, height), bitmap);
 					handler.post(new DisplayWaitingViews(url, bitmap));
 					notifyObservers(url, bitmap);
 					imageAdded.remove(url);
