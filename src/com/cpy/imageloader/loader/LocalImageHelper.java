@@ -25,7 +25,7 @@ public class LocalImageHelper {
 		File file = new File(path);
 		if(file.exists()) {
 			bitmap = BitmapFactory.decodeFile(path);
-			if(width != null && height != null && width > 0 && height > 0)  {
+			if(bitmap != null && width != null && height != null && width > 0 && height > 0)  {
 				float wScale = (float)width / (float)bitmap.getWidth();
 				if((int) (wScale * bitmap.getHeight()) <= height) {
 					if((int)wScale * bitmap.getHeight() <= 0 || width <= 0) {

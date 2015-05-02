@@ -1,6 +1,5 @@
 package com.cpy.imageloader.http;
 
-import java.net.CacheRequest;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;

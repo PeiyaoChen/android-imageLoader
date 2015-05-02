@@ -392,18 +392,9 @@ public class ImageLoader {
 		}
 
 		try {
-//			HttpURLConnection connection = (HttpURLConnection) realurl
-//					.openConnection();
-//			connection.setDoInput(true);
-//			connection.setConnectTimeout(30000);
-//			connection.setReadTimeout(30000);
-//			connection.setInstanceFollowRedirects(true);
-//			connection.connect();
-//
-//			InputStream is = connection.getInputStream();
 			InputStream is = null;
 			try {
-				is = HttpHelper.getInstance().getInputStream(url);
+				is = new HttpHelper().getInputStream(url).second;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -663,7 +654,7 @@ public class ImageLoader {
 		try {
 			trusted = KeyStore.getInstance("BKS");
 	        trusted.load(keystore, password.toCharArray());
-	        HttpHelper.init(trusted);
+	        HttpHelper.setHttpsLocalKeyStore(trusted);
 	        keystore.close();
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
