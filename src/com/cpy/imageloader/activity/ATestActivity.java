@@ -6,6 +6,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AbsListView;
+import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
@@ -16,11 +18,12 @@ public class ATestActivity extends Activity{
 
 	MyAdapter adapter;
 	ArrayList<String> urls;
+	private boolean isOnlyloadWhenNotfling = true;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.testactivity);
-        
+        isOnlyloadWhenNotfling = getIntent().getBooleanExtra("isOnlyLoadNotFling", true);
 		String[] urlArray = new String[]{
 				"http://img03.taobaocdn.com/tps/i3/T1lh1IXClcXXajoXZd-205-130.jpg",
 		          "http://img02.taobaocdn.com/tps/i2/T1oN5LXvBdXXajoXZd-205-130.jpg",
@@ -163,13 +166,36 @@ public class ATestActivity extends Activity{
 		
 		adapter = new MyAdapter(urls, this);
 		ListView lView = ((ListView)findViewById(R.id.listview));
+		if(isOnlyloadWhenNotfling)
+			lView.setOnScrollListener(new OnScrollListener() {
+				@Override
+				public void onScrollStateChanged(AbsListView view, int scrollState) {
+					if(scrollState != OnScrollListener.SCROLL_STATE_FLING) {
+						adapter.setIsLoadImage(true);
+						adapter.notifyDataSetChanged();
+					}
+					else {
+						adapter.setIsLoadImage(false);
+					}
+				}
+				
+				@Override
+				public void onScroll(AbsListView view, int firstVisibleItem,
+						int visibleItemCount, int totalItemCount) {
+				}
+			});
+		else
+			adapter.setIsLoadImage(true);
+		
 		lView.setAdapter(adapter);
 		lView.setOnItemClickListener(new OnItemClickListener() {
 
 			@Override
 			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
 					long arg3) {
-				startActivity(new Intent(ATestActivity.this, TestActivity.class));
+				Intent intent = new Intent(ATestActivity.this, TestActivity.class);
+				intent.putExtra("isOnlyLoadNotFling", isOnlyloadWhenNotfling);
+				startActivity(intent);
 			}
 		});
 	}

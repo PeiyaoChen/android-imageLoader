@@ -29,8 +29,8 @@ import javax.net.ssl.TrustManager;
 
 import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
 
-import android.content.Context;
-import android.support.v4.util.Pair;
+import android.util.Pair;
+
 
 /**
  * HTTP helper for HTTP or HTTPS operations
@@ -44,7 +44,7 @@ public class HttpHelper {
 
 	private static boolean IS_GZIP_ENCODE = false;
 	public static KeyStore localKeyStore = null;
-	private SSLContext sslContext;
+	private static SSLContext sslContext = null;
 	private static boolean hostNameVarify = true;
 	private int statusCode = 200;
 	
@@ -52,6 +52,20 @@ public class HttpHelper {
 	
 	public static void setHttpsLocalKeyStore(KeyStore keyStore) {
 		localKeyStore = keyStore;
+		initSSLContext();
+	}
+	
+	private static void initSSLContext() {
+		MyTrustManager myTrustManager = new MyTrustManager(localKeyStore);
+		TrustManager[] trustManagers = {myTrustManager};
+		try {
+			sslContext = SSLContext.getInstance("TLS");
+			sslContext.init(null, trustManagers, null);
+		} catch (KeyManagementException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -71,15 +85,8 @@ public class HttpHelper {
 	}
 	
 	public HttpHelper() {
-		MyTrustManager myTrustManager = new MyTrustManager(localKeyStore);
-		TrustManager[] trustManagers = {myTrustManager};
-		try {
-			sslContext = SSLContext.getInstance("TLS");
-			sslContext.init(null, trustManagers, null);
-		} catch (KeyManagementException e) {
-			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
+		if(sslContext == null) {
+			initSSLContext();
 		}
 	};
 	
@@ -103,7 +110,7 @@ public class HttpHelper {
 		return getInputStream(actualUrl);
 	}
 	
-	public String getGetResults(final String url, final HashMap<String, String> getParams, Context context) throws IOException {
+	public String getGetResults(final String url, final HashMap<String, String> getParams) throws IOException {
 		String actualUrl = combineUrlAndParams(url, getParams);
 		InputStream in = getInputStream(actualUrl).second;
 		return getString(in);

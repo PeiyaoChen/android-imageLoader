@@ -18,6 +18,7 @@ public class MyAdapter extends BaseAdapter{
 
 	ArrayList<String> mUrls = new ArrayList<>();
 	Context mContext;
+	private boolean isLoadImage = true;
 	
 	public MyAdapter(ArrayList<String> urls, Context context) {
 		mUrls = urls;
@@ -49,9 +50,14 @@ public class MyAdapter extends BaseAdapter{
 		}
 		ImageView imageView = (ImageView)view.findViewById(R.id.imageview);
 		imageView.setImageResource(R.drawable.ic_launcher);
-		ImageLoader.getInstance(mContext.getApplicationContext()).loadImage(mUrls.get(position), imageView);
+		if(isLoadImage)
+			ImageLoader.getInstance(mContext.getApplicationContext()).loadImage(mUrls.get(position), imageView);
 		Log.v("cpy", "get view " + position);
 		return view;
+	}
+	
+	public void setIsLoadImage(boolean isLoadImage) {
+		this.isLoadImage = isLoadImage;
 	}
 
 }
