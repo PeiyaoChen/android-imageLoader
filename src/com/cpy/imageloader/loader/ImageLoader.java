@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * This class is used for loading image from server, local file system or memory cache </br></br>
@@ -85,7 +86,7 @@ public class ImageLoader {
 	/**
 	 * singleton instance
 	 */
-	private static ImageLoader instance = null;
+	private static volatile ImageLoader instance = null;
 	private Handler handler = new Handler(Looper.getMainLooper());
 	/**
 	 * Memory cache for bitmaps
@@ -130,6 +131,8 @@ public class ImageLoader {
 	private int loadSuccessCount = 0;
 	private int loadThrowCount = 0;
 	private int loadFailedCount = 0;
+
+	private ReentrantLock lock = new ReentrantLock();
 
 	/**
 	 * Callback which will be invoked when the queue is full and a thread is added.
@@ -311,6 +314,7 @@ public class ImageLoader {
 			}
 			return;
 		}
+		lock.lock();
 		if (urlMapViews.get(url) != null) {
 			urlMapViews.get(url).add(view);
 		} else {
@@ -319,6 +323,7 @@ public class ImageLoader {
 			newSet.add(view);
 			urlMapViews.put(url, newSet);
 		}
+		lock.unlock();
 		if (!imageAdded.add(url)) {
 			return;
 		}
@@ -347,7 +352,6 @@ public class ImageLoader {
 				observer.onGetBitmap(cache.get(getCacheKey(url, width, height)));
 			return;
 		}
-
 		if (urlMapObservers.get(url) != null) {
 			urlMapObservers.get(url).add(observer);
 		} else {
@@ -618,7 +622,9 @@ public class ImageLoader {
 			for (GetBitmapObserver observer : urlMapObservers.get(url)) {
 				observer.onGetBitmap(bitmap);
 			}
+			lock.lock();
 			urlMapObservers.remove(url);
+			lock.unlock();
 		}
 	}
 
