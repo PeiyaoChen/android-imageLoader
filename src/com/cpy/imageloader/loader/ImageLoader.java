@@ -1,9 +1,24 @@
 /*
  * Written by Peiyao Chen
  * Peiyao Chen is a master student in Sen Yat-sen University
- * Eamil: wincpy@gmail.com
+ * Email: wincpy@gmail.com
  */
 package com.cpy.imageloader.loader;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
+import android.support.v4.util.LruCache;
+import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
+
+import com.cpy.imageloader.http.HttpHelper;
+import com.cpy.imageloader.loader.MyDiscardOldestPolicy.DiscardCallback;
+import com.cpy.imageloader.loader.deque.LIFOLinkedBlockingDeque;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,7 +26,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -25,25 +39,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.os.Handler;
-import android.os.Looper;
-import android.support.v4.util.LruCache;
-import android.util.Log;
-import android.view.View;
-import android.widget.ImageView;
-
-import com.cpy.imageloader.R;
-import com.cpy.imageloader.http.HttpHelper;
-import com.cpy.imageloader.loader.MyDiscardOldestPolicy.DiscardCallback;
-import com.cpy.imageloader.loader.deque.LIFOLinkedBlockingDeque;
 
 /**
  * This class is used for loading image from server, local file system or memory cache </br></br>
@@ -54,7 +53,7 @@ import com.cpy.imageloader.loader.deque.LIFOLinkedBlockingDeque;
  * Before usage, developer can call {@link #initThreadPool(int, int, int, int, int)} to change the setting</br> </br>
  * 
  * When the waiting queue is full and a new thread is enqueued, the oldest thread will be removed and the new one will 
- * be dequeued. </br></br>
+ * be enqueued. </br></br>
  * 
  * This class use singleton pattern. Usage: ImageLoader.getInstance().XXX(method name) </br></br>
  * 
@@ -111,7 +110,8 @@ public class ImageLoader {
 	/**
 	 * record observer set that waiting for a specific image loading finished
 	 */
-	private Map<String, Set<GetBitmapObserver>> urlMapObservers = new HashMap<String, Set<GetBitmapObserver>>();
+	private ConcurrentHashMap<String, Set<GetBitmapObserver>> urlMapObservers =
+			new ConcurrentHashMap<String, Set<GetBitmapObserver>>();
 
 	private LocalFilePathMapper localPathMapper = new LocalFilePathMapper() {
 		@Override

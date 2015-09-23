@@ -1,5 +1,9 @@
 package com.cpy.imageloader.http;
 
+import android.util.Pair;
+
+import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -27,10 +31,6 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
-import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
-
-import android.util.Pair;
-
 
 /**
  * HTTP helper for HTTP or HTTPS operations
@@ -43,7 +43,7 @@ public class HttpHelper {
 	private static final int READ_TIMEOUT = 30000;
 
 	private static boolean IS_GZIP_ENCODE = false;
-	public static KeyStore localKeyStore = null;
+	private static KeyStore localKeyStore = null;
 	private static SSLContext sslContext = null;
 	private static boolean hostNameVarify = true;
 	private int statusCode = 200;
@@ -139,22 +139,26 @@ public class HttpHelper {
 		Pair<Long, InputStream> inPair = getInputStream(url, getParams);
 		long l = inPair.first;
 		InputStream in = inPair.second;
-		DataInputStream dataInputStream = new DataInputStream(in);
-		if(!saveFile.getParentFile().exists()) {
-			saveFile.getParentFile().mkdirs();
-		}
 		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(saveFile));
-		byte[] buffer = new byte[1024];
-		int totalCount = 0;
-		int readSize = 0;
-		while((readSize = dataInputStream.read(buffer)) >= 0 && totalCount < l) {
-			out.write(buffer, 0, readSize);
-			totalCount += readSize;
-			if(onDataBufferChangedListener != null)
-				onDataBufferChangedListener.onDataBufferChanged((float) totalCount / l);
+		try {
+			DataInputStream dataInputStream = new DataInputStream(in);
+			if(!saveFile.getParentFile().exists()) {
+				saveFile.getParentFile().mkdirs();
+			}
+			byte[] buffer = new byte[1024];
+			int totalCount = 0;
+			int readSize = 0;
+			while((readSize = dataInputStream.read(buffer)) >= 0 && totalCount < l) {
+				out.write(buffer, 0, readSize);
+				totalCount += readSize;
+				if(onDataBufferChangedListener != null)
+					onDataBufferChangedListener.onDataBufferChanged((float) totalCount / l);
+			}
+		} finally {
+			in.close();
+			out.close();
 		}
-		in.close();
-		out.close();
+
 		return true;
 	}
 	

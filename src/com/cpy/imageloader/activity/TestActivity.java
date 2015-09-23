@@ -1,33 +1,30 @@
 package com.cpy.imageloader.activity;
 
-import java.util.ArrayList;
-
-import com.cpy.imageloader.R;
-import com.cpy.imageloader.loader.ImageLoader;
-
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AbsListView;
-import android.widget.AdapterView;
 import android.widget.AbsListView.OnScrollListener;
+import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
+
+import com.cpy.imageloader.R;
+import com.cpy.imageloader.loader.ImageLoader;
+
+import java.util.ArrayList;
 
 public class TestActivity extends Activity{
 
 	MyAdapter adapter;
 	ArrayList<String> urls;
 	private boolean isOnlyloadWhenNotfling = true;
-	public static Context mContext;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.testactivity);
-		mContext = this;
         isOnlyloadWhenNotfling = getIntent().getBooleanExtra("isOnlyLoadNotFling", true);
 		String[] urlArray = new String[]{
 				"http://img03.taobaocdn.com/tps/i3/T1lh1IXClcXXajoXZd-205-130.jpg",
